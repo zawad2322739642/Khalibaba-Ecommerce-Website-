@@ -1,0 +1,14 @@
+<?php
+require_once "../includes/config.php";requireRole('seller');$sid=$_SESSION['user']['id'];
+$stmt=$conn->prepare("SELECT COUNT(*) c FROM products WHERE seller_id=?");$stmt->bind_param("i",$sid);$stmt->execute();$products=$stmt->get_result()->fetch_assoc()['c'];
+$stmt=$conn->prepare("SELECT COUNT(DISTINCT order_id) c FROM order_items WHERE seller_id=?");$stmt->bind_param("i",$sid);$stmt->execute();$orders=$stmt->get_result()->fetch_assoc()['c'];
+$stmt=$conn->prepare("SELECT COALESCE(SUM(oi.quantity*oi.unit_price),0) total FROM order_items oi WHERE seller_id=?");$stmt->bind_param("i",$sid);$stmt->execute();$sales=$stmt->get_result()->fetch_assoc()['total'];
+$stmt=$conn->prepare("SELECT id,name,category,price,stock FROM products WHERE seller_id=? ORDER BY created_at DESC LIMIT 4");$stmt->bind_param("i",$sid);$stmt->execute();$recentProducts=$stmt->get_result();
+$stmt=$conn->prepare("SELECT oi.order_id,oi.quantity,oi.unit_price,o.status,o.created_at,p.name,b.name buyer FROM order_items oi JOIN orders o ON oi.order_id=o.id JOIN products p ON oi.product_id=p.id JOIN users b ON o.buyer_id=b.id WHERE oi.seller_id=? ORDER BY o.created_at DESC");$stmt->bind_param("i",$sid);$stmt->execute();$orderRows=$stmt->get_result();
+$pageTitle="Seller Dashboard";include "../includes/header.php"; ?>
+<div class="section-head"><div><h1>Seller Dashboard</h1><p class="muted">Manage products and incoming orders.</p></div><a class="btn" href="products.php">Manage products</a></div>
+<div class="stats"><div class="stat">Products<b><?=$products?></b></div><div class="stat">Orders<b><?=$orders?></b></div><div class="stat">Sales<b><?=taka($sales)?></b></div><div class="stat">Role<b>Seller</b></div></div>
+<div class="panel"><h2>Recent products</h2><?php if($recentProducts->num_rows): ?><?php while($p=$recentProducts->fetch_assoc()): ?><div class="row" style="padding:10px 0;border-bottom:1px solid #e7ebf0"><span><b><?=e($p['name'])?></b><br><small class="muted"><?=e($p['category'])?> · <?php if((int)$p['stock']>0): ?><?=$p['stock']?> in stock<?php else: ?><span class="badge Cancelled">Out of stock</span><?php endif; ?></small></span><b><?=taka($p['price'])?></b></div><?php endwhile; ?><?php else: ?><p class="muted">No products yet. Add your first item from the product manager.</p><?php endif; ?></div>
+<div class="panel"><h2>Incoming orders</h2><div class="table-wrap"><table class="table"><tr><th>Order</th><th>Product</th><th>Buyer</th><th>Qty</th><th>Status</th><th>Date</th></tr>
+<?php while($r=$orderRows->fetch_assoc()): ?><tr><td>#<?=$r['order_id']?></td><td><?=e($r['name'])?></td><td><?=e($r['buyer'])?></td><td><?=$r['quantity']?></td><td><span class="badge <?=$r['status']?>"><?=e($r['status'])?></span></td><td><?=date('d M',strtotime($r['created_at']))?></td></tr><?php endwhile; ?></table></div></div>
+<?php include "../includes/footer.php"; ?>

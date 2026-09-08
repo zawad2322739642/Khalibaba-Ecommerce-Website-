@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 320">
+<rect width="500" height="320" rx="32" fill="#eef2f7"/>
+<rect x="45" y="45" width="410" height="230" rx="25" fill="#7c3aed" opacity=".12"/>
+<circle cx="250" cy="145" r="70" fill="#7c3aed" opacity=".9"/>
+<rect x="180" y="125" width="140" height="42" rx="21" fill="white"/>
+<text x="250" y="230" text-anchor="middle" font-family="Arial" font-weight="800" font-size="34" fill="#18212f">MOUSE</text>
+</svg>
