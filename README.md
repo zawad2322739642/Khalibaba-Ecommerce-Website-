@@ -22,7 +22,8 @@ A minimal Software Engineering course project built with PHP + MySQL + HTML/CSS/
 2. Start Apache and MySQL in XAMPP.
 3. Open phpMyAdmin.
 4. Import `database/khalibaba.sql`.
-5. Visit `http://localhost/Khalibaba/`.
+5. Import `database/catalog_seed.sql` to add 10 approved demo sellers and 100 pictured products.
+6. Visit `http://localhost/Khalibaba/`.
 
 ## Demo accounts
 Buyer:
@@ -32,6 +33,15 @@ Buyer:
 Seller:
 - Email: seller@khalibaba.com
 - Password: 123456
+
+Administrator:
+- Email: admin@khalibaba.com
+- Password: 123456
+
+## SRS workflows added
+- Admin approval and suspension of sellers, listing moderation, marketplace commission settings, support/return handling, and content-report review.
+- Buyer support tickets, delivered-order return requests, and product-report submission.
+- Catalog filtering by category, brand, price, availability, and technical text; sorting; and up-to-three-product comparison including specifications and warranty.
 
 ## Important
 For a production deployment, use HTTPS, environment variables, CSRF protection, stricter validation, proper image uploads, and a production-grade password migration. The included demo SQL uses MD5 only for the pre-seeded demo users; newly registered users use PHP password hashing.

@@ -5,12 +5,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   $email=trim($_POST['email']); $password=$_POST['password'];
   $stmt=$conn->prepare("SELECT id,name,email,password,role FROM users WHERE email=? LIMIT 1");
   $stmt->bind_param("s",$email); $stmt->execute(); $u=$stmt->get_result()->fetch_assoc();
-  if($u && (password_verify($password,$u['password']) || md5($password)===$u['password'])) {
+  if($u && (password_verify($password,$u['password']) || md5($password)===$u['password']) && $u['role']!=='admin') {
     $_SESSION['user']=$u;
-    if($u['role']==='seller') header("Location: ../seller/dashboard.php");
+    if($u['role']==='admin') header("Location: ../admin/dashboard.php");
+    elseif($u['role']==='seller') header("Location: ../seller/dashboard.php");
     else header("Location: ../buyer/dashboard.php");
     exit;
-  } else $error="Invalid email or password.";
+  } elseif($u && (password_verify($password,$u['password']) || md5($password)===$u['password']) && $u['role']==='admin') $error="Administrators must use the separate Admin login.";
+  else $error="Invalid email or password.";
 }
 include "../includes/header.php";
 ?>
@@ -19,5 +21,6 @@ include "../includes/header.php";
 <form method="post"><div class="form-group"><label>Email</label><input type="email" name="email" required></div>
 <div class="form-group"><label>Password</label><input type="password" name="password" required></div><button class="btn">Login</button></form>
 <p class="muted">No account? <a href="register.php" style="color:#2563eb">Create one</a></p>
+<p class="muted"><a href="../admin/login.php" style="color:#2563eb">Administrator? Use Admin login</a></p>
 <p class="muted"><small>Demo buyer: buyer@khalibaba.com / 123456<br>Demo seller: seller@khalibaba.com / 123456</small></p>
 </div><?php include "../includes/footer.php"; ?>

@@ -22,7 +22,7 @@ $pageTitle="Cart";include "../includes/header.php"; ?>
 <?php foreach($items as $p): ?><div class="cart-item"><img src="/Khalibaba/assets/images/<?=e($p['image'])?>">
 <div><b><?=e($p['name'])?></b><div class="muted"><?=taka($p['price'])?> each</div></div>
 <input class="qty" type="number" min="0" max="<?=$p['stock']?>" name="qty[<?=$p['id']?>]" value="<?=$p['quantity']?>">
-<div><b><?=taka($p['subtotal'])?></b><form></form></div></div><?php endforeach; ?>
+<div><b><?=taka($p['subtotal'])?></b></div></div><?php endforeach; ?>
 <div class="row" style="margin-top:20px"><b>Total: <?=taka($total)?></b><div><button class="btn secondary">Update cart</button> <a class="btn" href="checkout.php">Proceed to order</a></div></div></form></div>
 <?php endif; ?>
 <?php include "../includes/footer.php"; ?>

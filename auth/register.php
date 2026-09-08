@@ -5,8 +5,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   $name=trim($_POST['name']); $email=trim($_POST['email']); $password=$_POST['password']; $role=$_POST['role'];
   if(!in_array($role,['buyer','seller'])) $role='buyer';
   $hash=password_hash($password,PASSWORD_DEFAULT);
-  $stmt=$conn->prepare("INSERT INTO users(name,email,password,role) VALUES(?,?,?,?)");
-  $stmt->bind_param("ssss",$name,$email,$hash,$role);
+  $sellerStatus=$role==='seller' ? 'Pending' : 'Approved';
+  $stmt=$conn->prepare("INSERT INTO users(name,email,password,role,seller_status) VALUES(?,?,?,?,?)");
+  $stmt->bind_param("sssss",$name,$email,$hash,$role,$sellerStatus);
   if($stmt->execute()){ header("Location: login.php"); exit; } else $error="Email may already be registered.";
 }
 include "../includes/header.php"; ?>

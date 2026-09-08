@@ -1,33 +1,22 @@
 <?php
-require_once "../includes/config.php";requireRole('seller');$sid=$_SESSION['user']['id'];$message="";$isError=false;
+require_once "../includes/config.php";requireRole('seller');$sid=$_SESSION['user']['id'];$message="";$error="";
 if($_SERVER['REQUEST_METHOD']==='POST'){
- if(isset($_POST['add_demo_catalog'])){
-  $demoProducts=[
-   ['USB-C Fast Charging Cable','Cables','Durable 1 meter USB-C cable with fast charging support.',450,25,'usb-c.svg'],
-   ['Wireless Mouse','Computer Accessories','Ergonomic 2.4GHz wireless mouse for everyday use.',850,18,'mouse.svg'],
-   ['Bluetooth Earbuds','Audio','Compact wireless earbuds with charging case.',1650,12,'earbuds.svg'],
-   ['65W GaN Charger','Chargers','Compact 65W USB-C GaN wall charger.',2200,10,'charger.svg'],
-   ['Laptop Stand','Computer Accessories','Foldable aluminum laptop stand for desk setups.',1450,8,'stand.svg'],
-   ['Power Bank 20000mAh','Power Banks','High-capacity fast-charging power bank with dual USB output.',1950,20,'charger.svg']
-  ];
-  $check=$conn->prepare("SELECT id FROM products WHERE seller_id=? AND name=?");
-  $insert=$conn->prepare("INSERT INTO products(seller_id,name,category,description,price,stock,image) VALUES(?,?,?,?,?,?,?)");$added=0;
-  foreach($demoProducts as $p){$check->bind_param("is",$sid,$p[0]);$check->execute();if(!$check->get_result()->num_rows){$insert->bind_param("isssdis",$sid,$p[0],$p[1],$p[2],$p[3],$p[4],$p[5]);if($insert->execute())$added++;}}
-  $message=$added ? "$added demo products added to your catalog." : "Your demo catalog is already added.";
- } else {
-  $name=trim($_POST['name']);$category=trim($_POST['category']);$description=trim($_POST['description']);$price=(float)$_POST['price'];$stock=(int)$_POST['stock'];$image='usb-c.svg';$uploadError='';
-  if(isset($_FILES['image']) && $_FILES['image']['error']!==UPLOAD_ERR_NO_FILE){
-   $info=@getimagesize($_FILES['image']['tmp_name']);$types=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif'];
-   if($_FILES['image']['error']!==UPLOAD_ERR_OK || !$info || !isset($types[$info['mime']])){$uploadError='Please choose a valid JPG, PNG, WEBP, or GIF image.';}
-   else {$folder=__DIR__."/../assets/images/uploads";if(!is_dir($folder) && !mkdir($folder,0755,true)){$uploadError='Unable to create the image upload folder.';}else{$image='uploads/'.bin2hex(random_bytes(8)).'.'.$types[$info['mime']];if(!move_uploaded_file($_FILES['image']['tmp_name'],__DIR__."/../assets/images/".$image))$uploadError='Unable to save the uploaded image.';}}
-  }
-  if($uploadError){$message=$uploadError;$isError=true;}else{$stmt=$conn->prepare("INSERT INTO products(seller_id,name,category,description,price,stock,image) VALUES(?,?,?,?,?,?,?)");$stmt->bind_param("isssdis",$sid,$name,$category,$description,$price,$stock,$image);if($stmt->execute())$message="Product added successfully.";}
+ $name=trim($_POST['name']);$category=trim($_POST['category']);$brand=trim($_POST['brand']);$description=trim($_POST['description']);$specifications=trim($_POST['specifications']);$warranty=trim($_POST['warranty']);$price=(float)$_POST['price'];$stock=max(0,(int)$_POST['stock']);$image='usb-c.svg';$categoryCheck=$conn->prepare('SELECT 1 FROM categories WHERE name=?');$categoryCheck->bind_param('s',$category);$categoryCheck->execute();if(!$categoryCheck->get_result()->fetch_assoc())$error='Choose a category managed by an administrator.';
+ if(!$error && isset($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE){
+   $upload=$_FILES['image'];$allowed=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
+   if($upload['error'] !== UPLOAD_ERR_OK)$error="The image upload failed. Please try again.";
+   else{
+     $mime=(new finfo(FILEINFO_MIME_TYPE))->file($upload['tmp_name']);
+     if($upload['size'] > 5*1024*1024)$error="Product images must be 5 MB or smaller.";
+     elseif(!isset($allowed[$mime]))$error="Please upload a JPG, PNG, or WebP image.";
+     else{$fileName=uniqid('product_',true).'.'.$allowed[$mime];$target=__DIR__."/../assets/images/products/".$fileName;if(move_uploaded_file($upload['tmp_name'],$target))$image='products/'.$fileName;else $error="Unable to save the product image.";}
+   }
  }
+ if(!$error){$status='Pending';$stmt=$conn->prepare("INSERT INTO products(seller_id,name,category,brand,description,specifications,warranty,price,stock,image,status) VALUES(?,?,?,?,?,?,?,?,?,?,?)");$stmt->bind_param("isssssssdiss",$sid,$name,$category,$brand,$description,$specifications,$warranty,$price,$stock,$image,$status);if($stmt->execute())$message="Product submitted for admin approval.";else $error="Unable to add the product.";}
 }
-$stmt=$conn->prepare("SELECT * FROM products WHERE seller_id=? ORDER BY created_at DESC");$stmt->bind_param("i",$sid);$stmt->execute();$products=$stmt->get_result();
+$stmt=$conn->prepare("SELECT * FROM products WHERE seller_id=? ORDER BY created_at DESC");$stmt->bind_param("i",$sid);$stmt->execute();$products=$stmt->get_result();$categories=$conn->query('SELECT name FROM categories ORDER BY name');
 $pageTitle="My Products";include "../includes/header.php"; ?>
-<div class="dashboard-grid"><div class="panel"><h2>Add product</h2><?php if($message): ?><div class="notice <?=$isError?'error':'success'?>"><?=e($message)?></div><?php endif; ?>
-<form method="post" style="margin-bottom:18px"><input type="hidden" name="add_demo_catalog" value="1"><button class="btn" type="submit">Add demo catalog</button><p class="muted"><small>Add six sample products to this seller account.</small></p></form>
-<form method="post" enctype="multipart/form-data"><div class="form-group"><label>Product name</label><input name="name" required></div><div class="form-group"><label>Category</label><input name="category" required placeholder="Chargers"></div><div class="form-group"><label>Description</label><textarea name="description"></textarea></div><div class="form-group"><label>Product photo <span class="muted">(optional)</span></label><input type="file" name="image" accept="image/jpeg,image/png,image/webp,image/gif"><small class="muted">JPG, PNG, WEBP, or GIF.</small></div><div class="row"><div class="form-group" style="flex:1"><label>Price (BDT)</label><input type="number" step=".01" name="price" required></div><div class="form-group" style="flex:1"><label>Stock</label><input type="number" name="stock" required></div></div><button class="btn">Add product</button></form></div>
-<div class="panel"><h2>Your catalog</h2><?php while($p=$products->fetch_assoc()): ?><div class="row" style="padding:12px 0;border-bottom:1px solid #e7ebf0"><span><b><?=e($p['name'])?></b><br><small class="muted"><?php if((int)$p['stock']>0): ?><?=$p['stock']?> stock<?php else: ?><span class="badge Cancelled">Out of stock</span><?php endif; ?></small></span><b><?=taka($p['price'])?></b></div><?php endwhile; ?></div></div>
+<div class="dashboard-grid"><div class="panel"><h2>Add product</h2><?php if($message): ?><div class="notice success"><?=e($message)?></div><?php endif; ?><?php if($error): ?><div class="notice error"><?=e($error)?></div><?php endif; ?>
+<form method="post" enctype="multipart/form-data"><div class="form-group"><label>Product name</label><input name="name" required></div><div class="row"><div class="form-group" style="flex:1"><label>Category</label><select name="category" required><option value="">Choose a category</option><?php while($category=$categories->fetch_assoc()):?><option value="<?=e($category['name'])?>"><?=e($category['name'])?></option><?php endwhile;?></select></div><div class="form-group" style="flex:1"><label>Brand</label><input name="brand" placeholder="Anker"></div></div><div class="form-group"><label>Description</label><textarea name="description"></textarea></div><div class="form-group"><label>Specifications</label><textarea name="specifications" placeholder="Ports, power, compatibility, dimensions"></textarea></div><div class="form-group"><label>Warranty</label><input name="warranty" placeholder="6 months"></div><div class="form-group"><label>Product picture <small class="muted">(JPG, PNG, or WebP; max 5 MB)</small></label><input type="file" name="image" accept="image/jpeg,image/png,image/webp"></div><div class="row"><div class="form-group" style="flex:1"><label>Price (BDT)</label><input type="number" step=".01" name="price" required></div><div class="form-group" style="flex:1"><label>Stock</label><input type="number" name="stock" required></div></div><button class="btn">Submit product</button></form></div>
+<div class="panel"><h2>Your catalog</h2><?php while($p=$products->fetch_assoc()): ?><div class="row" style="padding:12px 0;border-bottom:1px solid var(--line)"><span><b><?=e($p['name'])?></b><br><small class="muted"><span class="badge <?=e($p['status'])?>"><?=e($p['status'])?></span> <?php if($p['stock'] == 0): ?><span class="badge stock-out">Stock out</span><?php else: ?><?=$p['stock']?> stock<?php endif; ?></small></span><b><?=taka($p['price'])?></b></div><?php endwhile; ?></div></div>
 <?php include "../includes/footer.php"; ?>

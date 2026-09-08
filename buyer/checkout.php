@@ -13,6 +13,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
    try{
      $buyer=$_SESSION['user']['id'];$stmt=$conn->prepare("INSERT INTO orders(buyer_id,total_amount,shipping_address) VALUES(?,?,?)");$stmt->bind_param("ids",$buyer,$total,$address);$stmt->execute();$orderId=$conn->insert_id;
      foreach($products as $p){if($p['stock']<$p['quantity'])throw new Exception("Not enough stock for ".$p['name']);$st=$conn->prepare("INSERT INTO order_items(order_id,product_id,seller_id,quantity,unit_price) VALUES(?,?,?,?,?)");$st->bind_param("iiiid",$orderId,$p['id'],$p['seller_id'],$p['quantity'],$p['price']);$st->execute();$st=$conn->prepare("UPDATE products SET stock=stock-? WHERE id=?");$st->bind_param("ii",$p['quantity'],$p['id']);$st->execute();}
+     recordOrderStatus($conn,$orderId,'Pending',$buyer,'Order placed');
      $conn->commit();unset($_SESSION['cart']);header("Location: order.php?id=".$orderId);exit;
    }catch(Exception $ex){$conn->rollback();$error=$ex->getMessage();}
  }

@@ -1,33 +1,21 @@
 <?php
-require_once "includes/config.php";
-$pageTitle="Shop";
-$q = trim($_GET['q'] ?? '');
-$sql = "SELECT p.*, u.name seller_name FROM products p JOIN users u ON p.seller_id=u.id";
-if ($q !== '') {
-    $stmt=$conn->prepare($sql." WHERE p.name LIKE ? OR p.category LIKE ? ORDER BY p.created_at DESC");
-    $like="%".$q."%"; $stmt->bind_param("ss",$like,$like); $stmt->execute(); $products=$stmt->get_result();
-} else {
-    $products=$conn->query($sql." ORDER BY p.created_at DESC");
-}
-include "includes/header.php";
+require_once 'includes/config.php';
+$pageTitle='Shop';
+$q=trim($_GET['q']??''); $category=trim($_GET['category']??''); $brand=trim($_GET['brand']??''); $availability=$_GET['availability']??''; $sort=$_GET['sort']??'newest';
+$min=max(0,(float)($_GET['min_price']??0)); $max=max(0,(float)($_GET['max_price']??0));
+$order=['newest'=>'p.created_at DESC','price_low'=>'p.price ASC','price_high'=>'p.price DESC','rating'=>'average_rating DESC, p.created_at DESC'][$sort]??'p.created_at DESC';
+$where=["p.status='Approved'","u.seller_status='Approved'"]; $types=''; $params=[];
+if($q!==''){ $where[]='(p.name LIKE ? OR p.category LIKE ? OR p.brand LIKE ? OR p.description LIKE ? OR p.specifications LIKE ?)'; $like="%$q%"; $types.='sssss'; array_push($params,$like,$like,$like,$like,$like); }
+if($category!==''){ $where[]='p.category=?'; $types.='s'; $params[]=$category; }
+if($brand!==''){ $where[]='p.brand=?'; $types.='s'; $params[]=$brand; }
+if($min>0){ $where[]='p.price>=?'; $types.='d'; $params[]=$min; } if($max>0){ $where[]='p.price<=?'; $types.='d'; $params[]=$max; } if($availability==='in_stock') $where[]='p.stock>0';
+$sql="SELECT p.*,u.name seller_name,COALESCE(AVG(r.rating),0) average_rating,COUNT(r.id) review_count FROM products p JOIN users u ON p.seller_id=u.id LEFT JOIN reviews r ON r.product_id=p.id WHERE ".implode(' AND ',$where).' GROUP BY p.id ORDER BY '.$order;
+$stmt=$conn->prepare($sql); if($types!=='') $stmt->bind_param($types,...$params); $stmt->execute(); $products=$stmt->get_result();
+$categories=$conn->query("SELECT DISTINCT category FROM products WHERE status='Approved' ORDER BY category"); $brands=$conn->query("SELECT DISTINCT brand FROM products WHERE status='Approved' AND brand<>'' ORDER BY brand");
+include 'includes/header.php';
 ?>
-<section class="hero">
-  <div><h1>Tech accessories.<br>Simple shopping.</h1><p>Welcome to Khalibaba — a minimal marketplace for cables, chargers, audio gear and everyday electronics accessories.</p><a class="btn" href="#products">Browse products</a></div>
-  <div class="hero-art">⚡</div>
-</section>
-<form class="search" method="get"><input name="q" value="<?=e($q)?>" placeholder="Search cables, chargers, earbuds..."><button class="btn">Search</button></form>
-<div class="section-head"><h2 id="products">Featured accessories</h2><span class="muted"><?= $products->num_rows ?> products</span></div>
-<div class="grid">
-<?php while($p=$products->fetch_assoc()): ?>
-<article class="card">
-  <div class="product-img"><img src="/Khalibaba/assets/images/<?=e($p['image'])?>" alt="<?=e($p['name'])?>"></div>
-  <div class="card-body">
-    <div class="category"><?=e($p['category'])?></div><h3><?=e($p['name'])?></h3>
-    <div class="price"><?=taka($p['price'])?></div>
-    <p class="muted"><?=e(substr($p['description'],0,85))?>...</p>
-    <div class="row"><span class="muted"><?=$p['stock']?> in stock</span><a class="btn small" href="/Khalibaba/buyer/product.php?id=<?=$p['id']?>">View</a></div>
-  </div>
-</article>
-<?php endwhile; ?>
-</div>
-<?php include "includes/footer.php"; ?>
+<section class="hero"><div><h1>Tech accessories.<br>Simple shopping.</h1><p>Find compatible tech with filters, direct comparisons, customer reviews, and Khalibaba AI assistance.</p><div class="hero-actions"><a class="btn" href="#products">Browse products</a><button class="btn secondary" type="button" data-ai-open>Ask Khalibaba AI</button></div></div><div class="hero-art">⚡</div></section>
+<section class="catalog-tools"><form class="catalog-filter" method="get"><input name="q" value="<?=e($q)?>" placeholder="Search products, brands, specifications"><select name="category"><option value="">All categories</option><?php while($x=$categories->fetch_assoc()):?><option value="<?=e($x['category'])?>" <?=$category===$x['category']?'selected':''?>><?=e($x['category'])?></option><?php endwhile;?></select><select name="brand"><option value="">All brands</option><?php while($x=$brands->fetch_assoc()):?><option value="<?=e($x['brand'])?>" <?=$brand===$x['brand']?'selected':''?>><?=e($x['brand'])?></option><?php endwhile;?></select><input type="number" name="min_price" value="<?=e($_GET['min_price']??'')?>" min="0" placeholder="Min BDT"><input type="number" name="max_price" value="<?=e($_GET['max_price']??'')?>" min="0" placeholder="Max BDT"><select name="availability"><option value="">Any availability</option><option value="in_stock" <?=$availability==='in_stock'?'selected':''?>>In stock</option></select><select name="sort"><option value="newest">Newest</option><option value="price_low" <?=$sort==='price_low'?'selected':''?>>Price: low to high</option><option value="price_high" <?=$sort==='price_high'?'selected':''?>>Price: high to low</option><option value="rating" <?=$sort==='rating'?'selected':''?>>Top rated</option></select><button class="btn">Apply</button></form></section>
+<section class="ai-assistant" aria-labelledby="ai-title"><div><div class="category">Khalibaba AI</div><h2 id="ai-title">Find the right tech accessory</h2><p class="muted">Describe what you need in everyday language. AI suggestions only use the current catalog and never control stock, payment, or orders.</p></div><form class="ai-form" data-ai-form><label class="sr-only" for="ai-query">Ask Khalibaba AI</label><input id="ai-query" name="query" maxlength="300" placeholder="Example: I need a fast charger for my phone" required><button class="btn" type="submit">Ask AI</button></form><div class="ai-result" data-ai-result aria-live="polite"></div></section>
+<div class="section-head"><h2 id="products">Catalog</h2><span class="muted"><?=$products->num_rows?> products</span></div><form method="get" action="compare.php" data-compare-form><div class="grid"><?php while($p=$products->fetch_assoc()):?><article class="card"><div class="product-img"><img src="/Khalibaba/assets/images/<?=e($p['image'])?>" alt="<?=e($p['name'])?>"></div><div class="card-body"><div class="category"><?=e($p['category'])?></div><h3><?=e($p['name'])?></h3><p class="muted"><?=e($p['brand']?:'Unbranded')?> · <?=number_format($p['average_rating'],1)?>/5 (<?=$p['review_count']?>)</p><div class="price"><?=taka($p['price'])?></div><p class="muted"><?=e(substr($p['description'],0,85))?>...</p><div class="row"><?php if($p['stock']>0):?><span class="muted"><?=$p['stock']?> in stock</span><?php else:?><span class="badge stock-out">Stock out</span><?php endif;?><a class="btn small" href="/Khalibaba/buyer/product.php?id=<?=$p['id']?>">View</a></div><label class="compare-check"><input type="checkbox" name="ids[]" value="<?=$p['id']?>"> Compare</label></div></article><?php endwhile;?></div><div class="compare-bar"><span>Select up to 3 products</span><button class="btn small">Compare selected</button></div></form>
+<?php include 'includes/footer.php'; ?>
