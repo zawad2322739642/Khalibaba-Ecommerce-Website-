@@ -22,7 +22,7 @@ $reviewStmt=$conn->prepare("SELECT r.*,u.name buyer_name FROM reviews r JOIN use
 $ratingStmt=$conn->prepare("SELECT COUNT(*) review_count, COALESCE(AVG(rating),0) average_rating FROM reviews WHERE product_id=?");$ratingStmt->bind_param("i",$id);$ratingStmt->execute();$ratingSummary=$ratingStmt->get_result()->fetch_assoc();
 $pageTitle=$p['name']; include "../includes/header.php";
 ?>
-<div class="detail"><div class="detail-img"><img src="/Khalibaba/assets/images/<?=e($p['image'])?>"></div>
+<div class="detail"><div class="detail-img"><?php if(!empty($p['image'])):?><img src="/Khalibaba/assets/images/<?=e($p['image'])?>" alt="<?=e($p['name'])?>"><?php else:?><span class="blank-product-image">No image available</span><?php endif;?></div>
 <div><div class="category"><?=e($p['category'])?></div><h1><?=e($p['name'])?></h1><div class="price"><?=taka($p['price'])?></div>
 <p><?=nl2br(e($p['description']))?></p><p class="muted">Brand: <?=e($p['brand']?:'Not provided')?> · Warranty: <?=e($p['warranty']?:'Not provided')?></p><p class="muted">Seller: <?=e($p['seller_name'])?> · <?php if($p['stock'] > 0): ?><?=$p['stock']?> available<?php else: ?><span class="badge stock-out">Stock out</span><?php endif; ?></p>
 <?php if($p['specifications']):?><section class="specifications"><h3>Specifications</h3><p><?=nl2br(e($p['specifications']))?></p></section><?php endif;?>

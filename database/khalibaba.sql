@@ -8,6 +8,7 @@ CREATE TABLE users (
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role ENUM('buyer','seller','admin') NOT NULL DEFAULT 'buyer',
+    employee_id VARCHAR(50) NULL UNIQUE,
     seller_status ENUM('Pending','Approved','Suspended') NOT NULL DEFAULT 'Approved',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -97,10 +98,10 @@ CREATE TABLE content_reports (id INT AUTO_INCREMENT PRIMARY KEY, reporter_id INT
 CREATE TABLE marketplace_settings (setting_key VARCHAR(80) PRIMARY KEY, setting_value VARCHAR(255) NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
 INSERT INTO marketplace_settings(setting_key,setting_value) VALUES ('commission_rate','5'),('return_policy','Returns can be requested for delivered orders and are reviewed by the marketplace team.');
 
-INSERT INTO users (name,email,password,role) VALUES
-('Demo Seller','seller@khalibaba.com',MD5('123456'),'seller'),
-('Demo Buyer','buyer@khalibaba.com',MD5('123456'),'buyer'),
-('Demo Admin','admin@khalibaba.com',MD5('123456'),'admin');
+INSERT INTO users (name,email,password,role,employee_id) VALUES
+('Demo Seller','seller@khalibaba.com',MD5('123456'),'seller',NULL),
+('Demo Buyer','buyer@khalibaba.com',MD5('123456'),'buyer',NULL),
+('Demo Admin','admin@khalibaba.com',MD5('123456'),'admin','KHB-0003');
 
 INSERT INTO products (seller_id,name,category,description,price,stock,image) VALUES
 (1,'USB-C Fast Charging Cable','Cables','Durable 1 meter USB-C cable with fast charging support.',450,25,'usb-c.svg'),

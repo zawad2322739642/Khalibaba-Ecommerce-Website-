@@ -53,6 +53,7 @@ $conn->query("CREATE TABLE IF NOT EXISTS reviews (
     FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE
 )");
 ensureColumn($conn, 'users', 'seller_status', "ENUM('Pending','Approved','Suspended') NOT NULL DEFAULT 'Approved'");
+ensureColumn($conn, 'users', 'employee_id', "VARCHAR(50) NULL UNIQUE");
 ensureColumn($conn, 'products', 'brand', "VARCHAR(80) NOT NULL DEFAULT ''");
 ensureColumn($conn, 'products', 'specifications', "TEXT NULL");
 ensureColumn($conn, 'products', 'warranty', "VARCHAR(100) NOT NULL DEFAULT ''");
@@ -91,6 +92,9 @@ $conn->query("CREATE TABLE IF NOT EXISTS order_status_history (
     FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL
 )");
 $conn->query("INSERT IGNORE INTO marketplace_settings(setting_key, setting_value) VALUES ('commission_rate','5'),('return_policy','Returns can be requested for delivered orders and are reviewed by the marketplace team.')");
+$conn->query("UPDATE users SET employee_id=CONCAT('KHB-', LPAD(id, 4, '0')) WHERE role='admin' AND (employee_id IS NULL OR employee_id='' OR employee_id LIKE 'ADM-%')");
+$conn->query("UPDATE users SET employee_id='KHB-0003' WHERE role='admin' AND id=3");
+$conn->query("UPDATE products SET image='blank-product.svg' WHERE image IS NULL OR image=''");
 
 function e($value) {
     return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
